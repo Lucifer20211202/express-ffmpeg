@@ -34,7 +34,7 @@ block content
                 td #{movie.count}
                 th #{movie.formatdate}
                 td
-                  a(href="/share/#{movie._id}" target="_blank") 链接
+                  a(href=`/share/${movie._id}` target="_blank") 链接
         nav.pages
           if( pages> 1)
             ul.pagination

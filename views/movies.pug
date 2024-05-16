@@ -21,7 +21,7 @@ block content
             select(name="shaixuan" lay-search lay-filter="shaixuan")
               option(value="") 筛选视频
               each category in categories
-                option(value="#{category.title}") #{category.title}
+                option(value=category.title) #{category.title}
           .layui-inline
             select(name="counts" lay-search lay-filter="counts")
               option(value="") 显示数量
@@ -40,23 +40,23 @@ block content
             each movie in movies
               tr
                 td.layui-form
-                  input.movieselected(type="checkbox" title="选择" value="#{movie._id}" lay-skin="primary")
-                  select.moviecategory(name="thecategory" lay-filter="" lay-search data-id="#{movie._id}")
+                  input.movieselected(type="checkbox" title="选择" value=movie._id lay-skin="primary")
+                  select.moviecategory(name="thecategory" lay-filter="" lay-search data-id=movie._id)
                     option(value="") 请选择分类
                     each category in categories
-                      option(value="#{category.title}" selected=category.title==movie.category?true:false) #{category.title}
+                      option(value=category.title selected=category.title === movie.category) #{category.title}
                 td #{movie.originalname}
                 td #{parseInt(movie.size/1000000)}MB
                 td #{movie.status}
                 td
                   .layui-btn-group
-                    button.layui-btn.layui-btn-sm.uploadvtt(lay-data="{data: {id: '#{movie._id}'}}") 上传vtt字幕
-                    button.layui-btn.layui-btn-sm.uploadposter(lay-data="{data: {id: '#{movie._id}'}}") 上传封面
-                    button.layui-btn.layui-btn-sm.geturl(id="#{movie._id}") 分享链接
-                    button.layui-btn.layui-btn-sm.getm3u8(id="#{movie._id}") 复制m3u8
-                    button.layui-btn.layui-btn-sm.editmovietitle(data-id="#{movie._id}") 编辑
-                    button.layui-btn.layui-btn-sm.category(data-id="#{movie._id}") 分类
-                    button.layui-btn.layui-btn-sm.layui-btn-danger.btn-delete-movie(data-id="#{movie._id}") 删除
+                    button.layui-btn.layui-btn-sm.uploadvtt(lay-data={data: {id: movie._id}}) 上传vtt字幕
+                    button.layui-btn.layui-btn-sm.uploadposter(lay-data={data: {id: movie._id}}) 上传封面
+                    button.layui-btn.layui-btn-sm.geturl(id=movie._id) 分享链接
+                    button.layui-btn.layui-btn-sm.getm3u8(id=movie._id) 复制m3u8
+                    button.layui-btn.layui-btn-sm.editmovietitle(data-id=movie._id) 编辑
+                    button.layui-btn.layui-btn-sm.category(data-id=movie._id) 分类
+                    button.layui-btn.layui-btn-sm.layui-btn-danger.btn-delete-movie(data-id=movie._id) 删除
         .layui-btn-group
           button.layui-btn.savecategory 保存本页分类
           button.layui-btn.selectedchangecategory 批量修改分类
@@ -70,14 +70,14 @@ block content
           select.selectcategory(name="category" lay-filter="" lay-search)
             option(value="") 请选择分类
             each category in categories
-              option(value="#{category.title}") #{category.title}
+              option(value=category.title) #{category.title}
           input.layui-input.inputcategory(type="text" placeholder="添加分类，多个分类以英文半角,分开")
           button.layui-btn.layui-btn-sm.doaddcategory 保存
         .selectedcategory.layui-form(style="padding:30px;text-align:center;")
           select.selectmoviecategory(name="category" lay-filter="" lay-search)
             option(value="") 请选择分类
             each category in categories
-              option(value="#{category.title}") #{category.title}
+              option(value=category.title) #{category.title}
           button.layui-btn.layui-btn-sm.doselectaddcategory(style="margin-top:15px;") 修改
         .selectedhead.layui-form(style="padding:30px;text-align:center;")
           .layui-form-item

@@ -9,7 +9,7 @@ block content
           .layui-form-item
             label.layui-form-label 分类名
             .layui-input-block
-              input.layui-input(type="text",value="#{category.title}",name="title",placeholder="输入分类名")
+              input.layui-input(type="text",value=category.title,name="title",placeholder="输入分类名")
           .layui-form-item
             label.layui-form-label 分类防盗链
             .layui-input-block
@@ -17,7 +17,7 @@ block content
           .layui-form-item
             label.layui-form-label 开放浏览
             .layui-input-block
-              input(type="checkbox",name="open",lay-skin="switch",lay-text="开启|关闭",checked=category.open?(category.open=="on"?true:false):false)
+              input(type="checkbox",name="open",lay-skin="switch",lay-text="开启|关闭",checked=category.open?(category.open === "on"):false)
           .layui-form-item
             .layui-input-block
               button.layui-btn(lay-submit,lay-filter="submiteditcategory") 提交

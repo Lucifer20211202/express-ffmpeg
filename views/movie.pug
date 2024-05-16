@@ -16,9 +16,9 @@ html.playbody
       if !player.kaiguan
         - logo = '';
       if player.wenzikaiguan
-        - var bold = player.bold == 'on'? "bold":"normal";
-        - var italic = player.italic == 'on'? "italic":"normal";
-        - var underline = player.underline == 'on'?"underline":"none";
+        - var bold = player.bold === 'on'? "bold":"normal";
+        - var italic = player.italic === 'on'? "italic":"normal";
+        - var underline = player.underline === 'on'?"underline":"none";
         - var wenzix = player.wenzix + "px";
         - var wenziy = player.wenziy + "px";
         - var opacity = player.opacity;
