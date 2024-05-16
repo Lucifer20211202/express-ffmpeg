@@ -1,5 +1,5 @@
-var mongoose = require('mongoose');
-var ArticleSchema = require('../schemas/article');
-var Article = mongoose.model('Article', ArticleSchema);
+const mongoose = require('mongoose');
+const ArticleSchema = require('../schemas/article');
+const Article = mongoose.model('Article', ArticleSchema);
 
 module.exports = Article;

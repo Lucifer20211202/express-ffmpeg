@@ -12,8 +12,6 @@
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
-config/
-
 node_modules/
 
 .DS_Store
@@ -31,3 +29,8 @@ public/images/*
 public/uploads/*
 
 !public/uploads/index.html
+
+.idea
+
+.env.local
+.env.*.local

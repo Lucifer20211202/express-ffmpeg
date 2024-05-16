@@ -1,6 +1,6 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var portalSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const portalSchema = new Schema({
     host: String,
     screenshots: Number,
     title: String,

@@ -1,6 +1,6 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var playerSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const playerSchema = new Schema({
     kaiguan: String,
     mark: String,
     position: String,

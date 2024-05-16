@@ -1,9 +1,9 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var CardSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const CardSchema = new Schema({
     card: String,
     days: Number,
-    status: {type:String},
+    status: {type: String},
     useby: String,
     createAt: {
         type: Date

@@ -1,161 +1,122 @@
-var Movie = require('../models/movie');
-var Setting = require("../models/setting");
-var Fenfa = require("../models/fenfa");
-var FFmpeghelper = require('../helper/newffmpeg');
-var ListsFFmpegHelper = require("../helper/listsffmpeg");
-var ffmpegcut = require('../helper/ffmpegcut');
-var Category = require("../models/category");
-var Portal = require("../models/portal");
-var Player = require("../models/player");
-var User = require("../models/user");
-var Card = require("../models/card");
-var fs = require('fs');
-var _ = require('underscore');
-var moment = require('moment');
-var crypto = require('crypto');
-var async = require('async');
-var redis = require('redis')
-redis.createClient();
-var cache = require('../helper/rediscache');
-var path = require('path');
-const { validationResult } = require('express-validator/check');
-exports.getadmin = function(req,res){
-    res.render('admin',{
+const Movie = require('../models/movie');
+const Setting = require("../models/setting");
+const Fenfa = require("../models/fenfa");
+const FFmpeghelper = require('../helper/newffmpeg');
+const ListsFFmpegHelper = require("../helper/listsffmpeg");
+const ffmpegcut = require('../helper/ffmpegcut');
+const Category = require("../models/category");
+const Portal = require("../models/portal");
+const Player = require("../models/player");
+const User = require("../models/user");
+const Card = require("../models/card");
+const fs = require('fs');
+const _ = require('underscore');
+const moment = require('moment');
+const crypto = require('crypto');
+const async = require('async');
+const redis = require('ioredis');
+redis.createClient(process.env.REDIS_CONNECTION_STRING);
+const cache = require('../helper/rediscache');
+const {validationResult} = require('express-validator/check');
+exports.getadmin = (req, res) => {
+    res.render('admin', {
         user: req.session.user,
         title: "云转码后台管理平台"
     })
 }
 
-exports.getupload = function(req, res){
+exports.getupload = (req, res) => {
     res.render('upload', {
         user: req.session.user,
         title: "上传电影"
     })
 }
 
-exports.postupload = function(req, res) {
-    var file = req.file;
-    var body = req.body;
-    var des = "./movies/";
-    var filename = file.originalname;
-    var filearr = filename.split(".");
+exports.postupload = (req, res) => {
+    const file = req.file;
+    const body = req.body;
+    const des = "./movies/";
+    const filename = file.originalname;
+    const filearr = filename.split(".");
     filearr.pop();
-    var path = filearr.join('.');
-    var tmppath = des + path;
-    var exitst = fs.existsSync(tmppath);
-    if(!exitst) {
+    const path = filearr.join('.');
+    const tmppath = des + path;
+    const exitst = fs.existsSync(tmppath);
+    if (!exitst) {
         fs.mkdirSync(tmppath);
     }
-    var newfilename = filename + body.dzchunkindex;
+    const newfilename = filename + body.dzchunkindex;
     fs.renameSync(file.path, tmppath + "/" + newfilename);
-    if (body.dzchunkindex*1 + 1 == body.dztotalchunkcount*1) {
-        var files = fs.readdirSync(tmppath);
-        for(var i=0; i<files.length;i++){
-            fs.appendFileSync(file.path+"",fs.readFileSync(tmppath+"/"+filename+i));
+    if (body.dzchunkindex * 1 + 1 == body.dztotalchunkcount * 1) {
+        const files = fs.readdirSync(tmppath);
+        for (let i = 0; i < files.length; i++) {
+            fs.appendFileSync(file.path + "", fs.readFileSync(tmppath + "/" + filename + i));
             fs.unlinkSync(tmppath + "/" + filename + i);
         }
         fs.rmdirSync(tmppath);
-        var movieObj = {
+        const movieObj = {
             status: "waiting",
             originalname: file.originalname,
             path: file.path,
             size: body.dztotalfilesize
-        }
-        var movie = new Movie(movieObj);
-        movie.save(function(err, movie) {
-            if(err) {
-                console.log(err);
-            }
-        });
+        };
+        const movie = new Movie(movieObj);
+        movie.save();
     }
-    return res.json({success:1});
-    // if(file){
-    //     var movieObj = {
-    //         status: "transcoding",
-    //         originalname: file.originalname,
-    //         path: file.path,
-    //         size: file.size
-    //     }
-    //     var movie = new Movie(movieObj)
-    //     movie.save(function(err, movie) {
-    //         if(err) {
-    //             console.log(err);
-    //         }
-    //         FFmpeg.transcode(movie,function(){
-    //             Movie.findOne({originalname:file.originalname})
-    //                  .exec(function(err, movie){
-    //                      movie.status = "finished";
-    //                      movie.save(function(err, movie){
-    //                          if(err) {
-    //                              console.log(log);
-    //                          }
-    //                      })
-    //                  })
-    //         });
-    //         res.json({success:1});
-    //     });
-    // }
-    
+    return res.json({success: 1});
 }
 
-exports.getmovies = function(req, res) {
-    var page = req.query.page > 0 ? req.query.page : 1;
-    var perPage = req.query.counts>0?req.query.counts*1:10;
-    var keyword = req.query.keyword;
-    if(keyword&&keyword!=""){
+exports.getmovies = (req, res) => {
+    const page = req.query.page > 0 ? req.query.page : 1;
+    const perPage = req.query.counts > 0 ? req.query.counts * 1 : 10;
+    const keyword = req.query.keyword;
+    if (keyword && keyword !== "") {
         var reg = /^[A-Za-z0-9]{24}$/;
-        if(reg.test(keyword)) {
+        if (reg.test(keyword)) {
             Movie
                 .find({_id: keyword})
-                .exec(function(err, movies) {
+                .then(movies => {
                     Category.find()
-                        .exec(function(err,categories) {
-                            return res.render("movies", {
-                                user: req.session.user,
-                                title: '搜索结果',
-                                movies: movies,
-                                categories: categories,
-                                page: 1,
-                                pages: 1
-                            })
-                        })
+                        .then(categories => res.render("movies", {
+                            user: req.session.user,
+                            title: '搜索结果',
+                            movies: movies,
+                            categories: categories,
+                            page: 1,
+                            pages: 1
+                        }))
                 })
         } else {
             var reg = new RegExp(keyword);
             Movie
                 .find({originalname: reg})
-                .exec(function(err, movies) {
+                .then(movies => {
                     Category.find()
-                        .exec(function(err,categories) {
-                            return res.render("movies", {
-                                user: req.session.user,
-                                title: '搜索结果',
-                                movies: movies,
-                                categories: categories,
-                                page: 1,
-                                pages: 1
-                            })
-                        })
+                        .then(categories => res.render("movies", {
+                            user: req.session.user,
+                            title: '搜索结果',
+                            movies: movies,
+                            categories: categories,
+                            page: 1,
+                            pages: 1
+                        }))
                 })
         }
     } else {
         var category = req.query.category;
         var search = {};
-        if(category&&category!=""){
+        if (category && category !== "") {
             search = {category: category};
         }
         Movie
             .find(search)
             .sort('-createAt')
             .limit(perPage)
-            .skip(perPage * (page-1))
-            .exec(function(err, movies) {
-                if(err) {
-                    console.log(err);
-                }
-                Movie.find().count(function (err, count){
+            .skip(perPage * (page - 1))
+            .then(movies => {
+                Movie.find().count(count => {
                     Category.find()
-                        .exec(function(err, categories) {
+                        .then(categories => {
                             res.render("movies", {
                                 user: req.session.user,
                                 title: "全部电影库",
@@ -166,125 +127,108 @@ exports.getmovies = function(req, res) {
                             })
                         })
                 })
-                
+
             })
     }
-    
+
 }
 // apimanager
-exports.apim3u8 = function(req, res) {
-    var id = req.params.id;
-    var refer = req.headers.referer;
-    var agent = req.headers["user-agent"];
-    if(!refer || !agent) {
+exports.apim3u8 = (req, res) => {
+    const id = req.params.id;
+    const refer = req.headers.referer;
+    const agent = req.headers["user-agent"];
+    if (!refer || !agent) {
         return res.status(404).send("错误页面");
     }
-    var referarr = refer.split("/");
-    var urlarr = [];
-    urlarr.push(referarr[0],referarr[1],referarr[2]);
-    var url = urlarr.join('/');
+    const referarr = refer.split("/");
+    const urlarr = [];
+    urlarr.push(referarr[0], referarr[1], referarr[2]);
+    const url = urlarr.join('/');
     Movie.findOne({_id: id})
-        .exec(function(err, movie){
-            if(err) {
-                console.log(err);
-            }
-            if(!movie) {
+        .then(movie => {
+
+            if (!movie) {
                 return res.status(404).send("页面已删除");
             } else {
                 Setting.find()
-                    .exec(function(err, setting){
-                        if(err) {
-                            console.log(err);
-                        }
+                    .then(setting => {
                         var antiurl = setting[0].antiurl;
-                        if(antiurl.indexOf(url)!=-1||refer.indexOf(setting[0].host)==0){ 
-                            var path = "./public/videos/"+id+"/index.m3u8";
+                        if (antiurl.indexOf(url) != -1 || refer.indexOf(setting[0].host) == 0) {
+                            var path = "./public/videos/" + id + "/index.m3u8";
                             // cache.getTokenByRedis(function(err, token){
                             //     if(err) {
                             //         console.log(err);
                             //     }
                             //     var m3u8 = path + "?token="+token;
-                                
+
                             // });
                             var data = fs.readFileSync(path);
                             var datastring = data.toString('utf-8');
                             var m3u8arr = datastring.split("index");
-                            var m3u8strings = m3u8arr.join(setting[0].host+"/videos/"+id+"/index");
-                            res.header('Content-Type','application/octet-stream');
+                            var m3u8strings = m3u8arr.join(setting[0].host + "/videos/" + id + "/index");
+                            res.header('Content-Type', 'application/octet-stream');
                             res.header('Content-Disposition', 'attachment; filename=index.m3u8');
                             return res.status(200).send(m3u8strings);
-                          } else {
+                        } else {
                             res.status(404).send("无权访问");
-                          }
+                        }
                     })
             }
         })
 }
+
 // end apimanager
-exports.transcode = function(req, res) {
-    Movie
-        .find({status:"waiting"})
-        .exec(function(err, movies){
-            if(err){
-                console.log(err);
-            }
-            for (let i = 0; i < movies.length; i++) {
-                FFmpeghelper.transcode(movies[i]);
-            }
-            res.json({
-                success: 1
-            });
-        })
-}
-exports.listszhuanma = function(req, res) {
-    ListsFFmpegHelper.transcode();
+exports.transcode = async (req, res) => {
+    const movies = await Movie.find({status: "waiting"})
+    for (const movie of movies) {
+        FFmpeghelper.transcode(movie);
+    }
     res.json({
-        success:1
+        success: 1
+    });
+}
+
+exports.listszhuanma = async (req, res) => {
+    await ListsFFmpegHelper.transcode();
+    res.json({
+        success: 1
     })
 }
-exports.delete = function(req,res) {
-    var id = req.query.id;
-    Movie.findOne({_id:id})
-        .exec(function(err,movie){
-            if(err) {
-                console.log(err);
-            }
-            movie.remove(function(err){
-                if(err){
+exports.delete = (req, res) => {
+    const id = req.query.id;
+    Movie.findOne({_id: id})
+        .then(movie => {
+            movie.remove(err => {
+                if (err) {
                     console.log(err);
                 }
-                fs.exists(movie.path, function(exists) {
+                fs.exists(movie.path, exists => {
                     if (exists) {
                         fs.unlinkSync(movie.path);
                     }
                 });
-                deleteall("./public/videos/"+id);
-                res.json({success:1});
+                deleteall("./public/videos/" + id);
+                res.json({success: 1});
             })
-         });
+        });
 }
-exports.delcategory = function(req, res) {
-    var id = req.query.id;
-    Category.deleteOne({_id: id}, function(err) {
-        if(err) {
-            console.log(err);
-        }
-        res.json({success:1});
-    })
+
+exports.delcategory = (req, res) => {
+    const id = req.query.id;
+    Category.deleteOne({_id: id})
+    res.json({success: 1});
 }
-exports.deluser = function(req, res) {
-    var id = req.query.id;
-    User.deleteOne({_id: id}, function(err) {
-        if(err) {
-            console.log(err);
-        }
-        res.json({success:1});
-    })
+
+exports.deluser = (req, res) => {
+    const id = req.query.id;
+    User.deleteOne({_id: id})
+    res.json({success: 1});
 }
-exports.getmovie = function(req, res) {
-    var id = req.params.id;
+
+exports.getmovie = (req, res) => {
+    const id = req.params.id;
     async.parallel({
-        movie: function(callback) {
+        movie: callback => {
             Movie.findOneAndUpdate({
                 _id: id
             }, {
@@ -292,71 +236,59 @@ exports.getmovie = function(req, res) {
                     count: 1
                 }
             })
-                .exec(function(err,movie){
-                    if(err) {
-                        console.log(err);
-                    }
+                .then(movie => {
                     callback(null, movie);
                 });
         },
-        setting: function(callback) {
+        setting: callback => {
             Setting.find()
-                .exec(function(err, setting){
-                    if(err) {
-                        console.log(err);
-                    }
+                .then(setting => {
                     callback(null, setting[0]);
                 })
         },
-        player: function(callback) {
+        player: callback => {
             Player.find()
-                .exec(function(err, players) {
-                    if(err) {
-                        console.log(err);
-                    }
+                .then(players => {
                     callback(null, players[0]);
                 });
         }
-    }, function(err,results) {
-        if(err) {
+    }, (err, results) => {
+        const phoneviewer = agent.match(/(iphone|ipod|ipad|android)/);
+        if (err) {
             console.log(err);
         }
-        if(!results.movie) {
+        if (!results.movie) {
             res.statusCode = 404;
             return res.send("对不起，此页面不存在");
         }
-        var waplock = true;
-        if(results.player.waplock == 'on') {
-            var agent = req.headers["user-agent"].toLowerCase();
-            var phoneviewer = agent.match(/(iphone|ipod|ipad|android)/);
-            var browser = agent.match(/mqqbrowser/);
-            if(phoneviewer) {
-                if(browser) {
+        let waplock = true;
+        if (results.player.waplock === 'on') {
+            const agent = req.headers["user-agent"].toLowerCase();
+            const browser = agent.match(/mqqbrowser/);
+            if (phoneviewer) {
+                if (browser) {
                     waplock = false;
                 }
             }
         }
         Category.findOne({title: results.movie.category})
-            .exec(function(err, category) {
-                if(err) {
-                    console.log(err);
+            .then(category => {
+                let categoryanti = "";
+                let open = "";
+                if (category) {
+                    categoryanti = category.antiurl ? category.antiurl : "";
+                    open = category.open ? category.open : "";
                 }
-                var categoryanti = "";
-                var open = "";
-                if(category) {
-                    categoryanti = category.antiurl?category.antiurl:"";
-                    open = category.open?category.open:"";
-                }
-                var rgba = colorRgba(results.player.wenzibackground,results.player.wenzibackgroundopacity);
-                if (results.setting.antikey!=""){
-                    cache.getTokenByRedis(function(err, token){
-                        if(err) {
+                const rgba = colorRgba(results.player.wenzibackground, results.player.wenzibackgroundopacity);
+                if (results.setting.antikey != "") {
+                    cache.getTokenByRedis((err, token) => {
+                        if (err) {
                             console.log(err);
                         }
-                        res.render("movie",{
-                            level:req.level,
-                            title: results.movie.originalname+"在线播放",
-                            id:id,
+                        res.render("movie", {
+                            level: req.level,
+                            title: results.movie.originalname + "在线播放",
+                            id: id,
                             token: token,
                             poster: results.movie.poster,
                             phoneviewer: phoneviewer,
@@ -370,10 +302,10 @@ exports.getmovie = function(req, res) {
                         })
                     })
                 } else {
-                    res.render("movie",{
-                        level:req.level,
-                        title: results.movie.originalname+"在线播放",
-                        id:id,
+                    res.render("movie", {
+                        level: req.level,
+                        title: results.movie.originalname + "在线播放",
+                        id: id,
                         token: '',
                         poster: results.movie.poster,
                         phoneviewer: phoneviewer,
@@ -389,18 +321,15 @@ exports.getmovie = function(req, res) {
             })
     });
 }
-exports.setting = function(req, res) {
+exports.setting = (req, res) => {
     Setting.find()
-        .exec(function(err, setting) {
-            if(err) {
-                console.log(err);
-            }
+        .then(setting => {
             var newset;
-            if(setting.length>0) {
+            if (setting.length > 0) {
                 newset = setting[0];
             } else {
                 newset = {
-                    host:"",
+                    host: "",
                     hd: "",
                     antiurl: [""],
                     antiredirect: "https://ffmpeg.moejj.com",
@@ -413,12 +342,9 @@ exports.setting = function(req, res) {
                 }
             }
             Fenfa.find()
-                .exec(function(err, fenfa) {
-                    if(err) {
-                        console.log(err);
-                    }
+                .then(fenfa => {
                     var newfenfa;
-                    if(fenfa.length>0) {
+                    if (fenfa.length > 0) {
                         newfenfa = fenfa[0]
                     } else {
                         newfenfa = {
@@ -426,7 +352,7 @@ exports.setting = function(req, res) {
                             domains: [""]
                         }
                     }
-                    res.render("setting",{
+                    res.render("setting", {
                         user: req.session.user,
                         title: "云转码设置",
                         setting: newset,
@@ -434,44 +360,33 @@ exports.setting = function(req, res) {
                     })
                 });
         })
-    
+
 }
-exports.postfenfa = function(req, res) {
+exports.postfenfa = (req, res) => {
     var kaiguan = req.body.kaiguan;
     var domains = req.body.domains;
-    if(!kaiguan) {
+    if (!kaiguan) {
         kaiguan = "";
     }
     Fenfa.find()
-        .exec(function(err, fenfa) {
-            if(err) {
-                console.log(err);
-            }
+        .then(fenfa => {
             console.log(fenfa[0]);
-            if(fenfa.length>0) {
+            if (fenfa.length > 0) {
                 fenfa[0].kaiguan = kaiguan;
                 fenfa[0].domains = domains;
-                fenfa[0].save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                fenfa[0].save()
             } else {
                 var fenfaobj = {
                     kaiguan: kaiguan,
                     domains: domains
                 }
                 var newfenfa = new Fenfa(fenfaobj);
-                newfenfa.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                newfenfa.save()
             }
             res.redirect("/admin/setting");
         })
 }
-exports.postsetting = function(req, res) {
+exports.postsetting = (req, res) => {
     var host = req.body.host;
     var hd = req.body.hd;
     var antiurl = req.body.antiurl;
@@ -483,15 +398,12 @@ exports.postsetting = function(req, res) {
     var tsjiami = req.body.tsjiami;
     var api = req.body.api;
     antiurlarr = antiurl.split("|");
-    if(!miaoqie) {
+    if (!miaoqie) {
         miaoqie = "";
     }
     Setting.find()
-        .exec(function(err,setting){
-            if(err) {
-                console.log(err);
-            }
-            if(setting.length>0){
+        .then(setting => {
+            if (setting.length > 0) {
                 setting[0].host = host;
                 setting[0].hd = hd;
                 setting[0].antikey = antikey;
@@ -502,11 +414,7 @@ exports.postsetting = function(req, res) {
                 setting[0].screenshots = screenshots;
                 setting[0].tsjiami = tsjiami;
                 setting[0].api = api;
-                setting[0].save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                });
+                setting[0].save();
             } else {
                 var settingobj = {
                     host: host,
@@ -520,212 +428,165 @@ exports.postsetting = function(req, res) {
                     tsjiami: tsjiami,
                     api: api
                 }
-                var setting = new Setting(settingobj);
-                setting.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                });
+                var setting1 = new Setting(settingobj);
+                setting1.save();
             }
         });
     res.redirect("/admin/setting");
 }
-exports.editmovie = function(req, res) {
-    var id = req.params.id;
+exports.editmovie = (req, res) => {
+    const id = req.params.id;
     Movie.findOne({_id: id})
-        .exec(function(err, movie) {
-            if(err) {
-                console.log(err);
-            }
+        .then(movie => {
             res.render("editmovie", {
                 title: "修改电影标题",
                 movie: movie
             })
         })
 }
-exports.postupdatemovie = function(req, res) {
-    var id = req.params.id;
-    var originalname = req.body.originalname;
+exports.postupdatemovie = (req, res) => {
+    const id = req.params.id;
+    const originalname = req.body.originalname;
     Movie.findOne({_id: id})
-        .exec(function(err, movie) {
-            if(err) {
-                console.log(err);
-            }
+        .then(movie => {
             movie.originalname = originalname;
-            movie.save(function(err) {
-                if(err) {
-                    console.log(err);
-                }
-                res.redirect("/admin/movies");
-            })
+            movie.save()
+            res.redirect("/admin/movies");
         })
 }
-exports.uploadwatermark = function(req, res) {
-    var file = req.file;
-    var path = file.path;
+exports.uploadwatermark = (req, res) => {
+    const file = req.file;
+    const path = file.path;
     res.json({
         code: 0,
         img: path
     })
 }
-exports.uploadvtt = function(req, res) {
-    var path = req.file.path;
-    var des = './public/videos/'+req.body.id;
-    var exists = fs.existsSync(des);
-    if(exists) {
-        fs.rename(path,des+"/1.vtt",function(err) {
-            if(err) {
+exports.uploadvtt = (req, res) => {
+    const path = req.file.path;
+    const des = './public/videos/' + req.body.id;
+    const exists = fs.existsSync(des);
+    if (exists) {
+        fs.rename(path, des + "/1.vtt", err => {
+            if (err) {
                 console.log(err);
             }
             res.json({
-                code:0
+                code: 0
             })
         })
     }
 }
-exports.uploadposter = function(req, res) {
-    var path = req.file.path;
-    var id = req.body.id;
-    var des = './public/videos/'+id;
-    var exists = fs.existsSync(des);
+exports.uploadposter = (req, res) => {
+    const path = req.file.path;
+    const id = req.body.id;
+    const des = './public/videos/' + id;
+    const exists = fs.existsSync(des);
     if (!exists) {
         fs.mkdirSync(des);
     }
-    fs.rename(path,des+"/poster.jpg",function(err) {
-        if(err) {
+    fs.rename(path, des + "/poster.jpg", err => {
+        if (err) {
             console.log(err);
         }
         Movie.findOne({_id: id})
-            .exec(function(err, movie) {
-                if(err) {
-                    console.log(err);
-                }
-                movie.poster = '/videos/'+id+'/poster.jpg';
-                movie.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                    res.json({
-                        code:0
-                    });
-                })
+            .then(movie => {
+                movie.poster = '/videos/' + id + '/poster.jpg';
+                movie.save()
+                res.json({
+                    code: 0
+                });
             })
     })
 }
-exports.postzimu = function(req, res) {
+exports.postzimu = (req, res) => {
     res.json({
-        code:0
+        code: 0
     })
 }
 
-exports.playmagnet = function(req, res) {
+exports.playmagnet = (req, res) => {
     Setting.find()
-    .exec(function(err, setting){
-        if(err) {
-            console.log(err);
-        }
-        res.render("playmagnet", {
-            title: "在线播放磁力链接",
-            antiurl: setting[0].antiurl
+        .then(setting => {
+            res.render("playmagnet", {
+                title: "在线播放磁力链接",
+                antiurl: setting[0].antiurl
+            })
         })
-    })
-    
+
 }
 
-exports.ruku = function(req, res) {
-    fs.readdir('./movies', function(err, files) {
-        if(err) {
+exports.ruku = (req, res) => {
+    fs.readdir('./movies', (err, files) => {
+        if (err) {
             console.log(err);
         }
         var path = "./movies/";
-        files.forEach(function(file) {
-            fs.stat(path+file, function(err, stats) {
-                if(err) {
+        files.forEach(file => {
+            fs.stat(path + file, (err, stats) => {
+                if (err) {
                     console.log(err);
                 }
-                if(stats.isFile && stats.size>500000){
-                  Movie.findOne({originalname: file})
-                      .exec(function(err, movie) {
-                          if(err) {
-                              console.log(err);
-                          }
-                          if(!movie) {
-                            var movieobj = {
-                                originalname: file,
-                                status: "waiting",
-                                path: path+file,
-                                size: stats.size,
-                                createAt: Date.now()
-                            }
-                            var newmovie = new Movie(movieobj);
-                            newmovie.save(function(err) {
-                                if(err) {
-                                    console.log(err);
+                if (stats.isFile && stats.size > 500000) {
+                    Movie.findOne({originalname: file})
+                        .then(movie => {
+                            if (!movie) {
+                                var movieobj = {
+                                    originalname: file,
+                                    status: "waiting",
+                                    path: path + file,
+                                    size: stats.size,
+                                    createAt: Date.now()
                                 }
-                            })
-                          }
-                      })
+                                var newmovie = new Movie(movieobj);
+                                newmovie.save()
+                            }
+                        })
                 }
             })
         })
         res.json({success: 1});
     });
 }
-exports.addcategory = function(req, res) {
+exports.addcategory = function (req, res) {
     var id = req.body.id;
     var inputcategory = req.body.inputcategory;
     var selectcategory = req.body.selectcategory;
-    if(selectcategory&&selectcategory!="") {
+    if (selectcategory && selectcategory != "") {
         Movie.findOne({_id: id})
-            .exec(function(err, movie) {
-                if(err) {
-                    console.log(err);
-                }
+            .then(movie => {
                 movie.category = selectcategory;
-                movie.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                movie.save()
             })
     }
-    if(inputcategory&&inputcategory!="") {
+    if (inputcategory && inputcategory != "") {
         var categoryarr = inputcategory.split(",");
         var newcategoryarr = [];
         categoryarr.forEach(element => {
             newcategoryarr.push({title: element});
         });
-        Category.insertMany(newcategoryarr, function(err) {
-            if(err) {
-                console.log(err);
-            }
-        });
+        Category.insertMany(newcategoryarr);
     }
     res.json({
-        success:1
+        success: 1
     });
 }
-exports.getCategories = function(req, res) {
+exports.getCategories = (req, res) => {
     Category.find()
-        .exec(function(err, categories) {
-            if(err) {
-                console.log(err);
-            }
+        .then(categories => {
             res.render('categories', {
-                title:"分类管理",
+                title: "分类管理",
                 categories: categories
             })
         })
 }
-exports.portal = function(req, res) {
-    var portal;
+exports.portal = (req, res) => {
+    let portal;
     Portal.find()
-        .exec(function(err, portals) {
-            if(err) {
-                console.log(err);
-            }
-            if(portals.length>0) {
-                portal=portals[0];
+        .then(portals => {
+
+            if (portals.length > 0) {
+                portal = portals[0];
             } else {
                 portal = {
                     title: '',
@@ -751,7 +612,7 @@ exports.portal = function(req, res) {
             })
         });
 }
-exports.postportal = function(req, res) {
+exports.postportal = (req, res) => {
     var title = req.body.title;
     var seotitle = req.body.seotitle;
     var keywords = req.body.keywords;
@@ -768,11 +629,8 @@ exports.postportal = function(req, res) {
     var theme = req.body.theme;
     var tongji = req.body.tongji;
     Portal.find()
-        .exec(function(err, portals) {
-            if(err) {
-                console.log(err);
-            }
-            if(portals.length>0) {
+        .then(portals => {
+            if (portals.length > 0) {
                 portals[0].screenshots = screenshots;
                 portals[0].host = host;
                 portals[0].title = title;
@@ -786,13 +644,9 @@ exports.postportal = function(req, res) {
                 portals[0].imagestitle = imagestitle;
                 portals[0].articles = articles;
                 portals[0].articlestitle = articlestitle;
-                portals[0].theme = theme,
+                portals[0].theme = theme;
                 portals[0].tongji = tongji;
-                portals[0].save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                portals[0].save()
             } else {
                 var portalobj = {
                     host: host,
@@ -812,60 +666,53 @@ exports.postportal = function(req, res) {
                     tongji: tongji
                 }
                 var newportal = new Portal(portalobj);
-                newportal.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                newportal.save()
             }
             res.redirect("/admin/portal");
         })
 }
 
-exports.bofangqi = function(req, res) {
-   var player;
-   Player.find()
-       .exec(function(err, players) {
-           if(err) {
-               console.log(err);
-           }
-           if(players.length>0) {
-               player=players[0];
-           } else {
-               player = {
-                   kaiguan: '',
-                   mark: '/mark/mark.png',
-                   position: 'lefttop',
-                   markx: 20,
-                   marky: 20,
-                   p2p: 'on',
-                   waplock: 'on',
-                   locktip: '<p style="color:#fff;">请使用qq浏览器观看</p>',
-                   font: 'Microsoft Yahei',
-                   fontsize: 14,
-                   opacity: 0.8,
-                   bold: 'on',
-                   color: '#701919',
-                   text: '云转码express-ffmpeg',
-                   wenzikaiguan: 'on',
-                   italic: 'on',
-                   underline: 'on',
-                   link: 'http://ffmpeg.moejj.com',
-                   wenziposition: 'lefttop',
-                   wenzibackground: '#fff',
-                   wenzibackgroundopacity: 0.5,
-                   tongji: '',
-                   wenzix: 20,
-                   wenziy: 20
-               }
-           }
-           res.render('adminplayer', {
-               title: '播放器设置',
-               player: player
-           })
-       });
+exports.bofangqi = (req, res) => {
+    var player;
+    Player.find()
+        .then(players => {
+            if (players.length > 0) {
+                player = players[0];
+            } else {
+                player = {
+                    kaiguan: '',
+                    mark: '/mark/mark.png',
+                    position: 'lefttop',
+                    markx: 20,
+                    marky: 20,
+                    p2p: 'on',
+                    waplock: 'on',
+                    locktip: '<p style="color:#fff;">请使用qq浏览器观看</p>',
+                    font: 'Microsoft Yahei',
+                    fontsize: 14,
+                    opacity: 0.8,
+                    bold: 'on',
+                    color: '#701919',
+                    text: '云转码express-ffmpeg',
+                    wenzikaiguan: 'on',
+                    italic: 'on',
+                    underline: 'on',
+                    link: 'http://ffmpeg.moejj.com',
+                    wenziposition: 'lefttop',
+                    wenzibackground: '#fff',
+                    wenzibackgroundopacity: 0.5,
+                    tongji: '',
+                    wenzix: 20,
+                    wenziy: 20
+                }
+            }
+            res.render('adminplayer', {
+                title: '播放器设置',
+                player: player
+            })
+        });
 }
-exports.postbofangqi = function(req, res) {
+exports.postbofangqi = (req, res) => {
     var kaiguan = req.body.kaiguan;
     var position = req.body.position;
     var mark = req.body.watermark;
@@ -891,11 +738,8 @@ exports.postbofangqi = function(req, res) {
     var locktip = req.body.locktip;
     var tongji = req.body.tongji;
     Player.find()
-        .exec(function(err, players) {
-            if(err) {
-                console.log(err);
-            }
-            if(players.length>0) {
+        .then(players => {
+            if (players.length > 0) {
                 players[0].kaiguan = kaiguan;
                 players[0].mark = mark;
                 players[0].position = position;
@@ -920,11 +764,7 @@ exports.postbofangqi = function(req, res) {
                 players[0].italic = italic;
                 players[0].underline = underline;
                 players[0].tongji = tongji;
-                players[0].save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                players[0].save()
             } else {
                 var playerobj = {
                     kaiguan: kaiguan,
@@ -946,81 +786,68 @@ exports.postbofangqi = function(req, res) {
                     italic: italic,
                     link: link,
                     wenziposition: wenziposition,
-                    wenzibackground:wenzibackground,
+                    wenzibackground: wenzibackground,
                     wenzibackgroundopacity: wenzibackgroundopacity,
                     wenzix: wenzix,
                     wenziy: wenziy,
                     tongji: tongji
                 };
                 var newplayer = new Player(playerobj);
-                newplayer.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                newplayer.save()
             }
             res.redirect("/admin/bofangqi");
         })
 }
-exports.tongji = function(req, res) {
+exports.tongji = (req, res) => {
     var page = req.query.page > 0 ? req.query.page : 1;
-    var perPage = req.query.counts?req.query.counts:10;
-    var sort = req.query.sort?req.query.sort:"newtime";
+    var perPage = req.query.counts ? req.query.counts : 10;
+    var sort = req.query.sort ? req.query.sort : "newtime";
     var perPage = parseInt(perPage);
     var sortquery = '';
-    if(sort=="hot") {
+    if (sort === "hot") {
         sortquery = '-count';
-    } else if (sort == 'nothot') {
+    } else if (sort === 'nothot') {
         sortquery = 'count';
-    } else if (sort == 'newtime') {
+    } else if (sort === 'newtime') {
         sortquery = '-createAt';
-    } else if (sort == 'oldtime') {
+    } else if (sort === 'oldtime') {
         sortquery = 'createAt';
     }
     Movie.find()
         .sort(sortquery)
         .limit(perPage)
-        .skip(perPage * (page-1))
-        .exec(function(err, movies) {
-            if(err) {
-                console.log(err);
-            }
+        .skip(perPage * (page - 1))
+        .then(movies => {
             var backgroundColor = [];
             for (let index = 0; index < movies.length; index++) {
                 backgroundColor.push(randomcolor());
-                movies[index].formatdate=moment(movies[index].createAt).format('YYYY年MM月DD日, HH:mm:ss');
+                movies[index].formatdate = moment(movies[index].createAt).format('YYYY年MM月DD日, HH:mm:ss');
             }
             var data = {};
-            var dataarr = _.pluck(movies,'count');
+            var dataarr = _.pluck(movies, 'count');
             data.datasets = [{
                 data: dataarr,
                 backgroundColor: backgroundColor
             }];
             var labelarr = _.pluck(movies, 'originalname');
             data.labels = labelarr;
-            Movie.find().count(function (err, count) {
-               if(err) {
-                   console.log(err);
-               }
-               res.render('tongji', {
-                   title: "播放统计",
-                   movies: movies,
-                   data: JSON.stringify(data),
-                   page: page,
-                   pages: Math.ceil(count / perPage)
-               })
+            Movie.find().count(count => {
+                res.render('tongji', {
+                    title: "播放统计",
+                    movies: movies,
+                    data: JSON.stringify(data),
+                    page: page,
+                    pages: Math.ceil(count / perPage)
+                })
             })
         })
 }
 
-exports.login = function(req, res) {
-    var user = req.session.leveluser;
+exports.login = (req, res) => {
+    const user = req.session.leveluser;
     Portal.find()
-        .exec(function(err, portal) {
-            if(err) {
-                console.log(err);
-            }
-            res.render(req.portal.theme+"/cmslogin", {
+        .then((err, portal) => {
+            res.render(req.portal.theme + "/cmslogin", {
                 user: user,
                 portal: portal[0],
                 title: "用户登陆",
@@ -1028,22 +855,19 @@ exports.login = function(req, res) {
             })
         })
 }
-exports.reg = function(req, res) {
+exports.reg = (req, res) => {
     Portal.find()
-        .exec(function(err, portal) {
-            if(err) {
-                console.log(err);
-            }
-            res.render(req.portal.theme+'/cmsreg', {
+        .then((err, portal) => {
+            res.render(req.portal.theme + '/cmsreg', {
                 portal: portal[0],
                 title: '用户注册',
                 info: req.flash('info')
             })
         })
 }
-exports.postreg = function(req, res) {
+exports.postreg = (req, res) => {
     const errors = validationResult(req);
-    if(!errors.isEmpty()) {
+    if (!errors.isEmpty()) {
         return res.status(422).json({
             errors: errors.array()
         });
@@ -1058,51 +882,39 @@ exports.postreg = function(req, res) {
         password: password
     }
     User.findOne({username: username})
-        .exec(function(err,user) {
-            if(err) {
-                console.log(err);
-            }
-            if(user) {
+        .then(user => {
+            if (user) {
                 req.flash('info', '此用户名已经被注册');
                 return res.redirect('/register');
             }
             User.findOne({email: email})
-                .exec(function(err, user) {
-                    if(err) {
-                        console.log(err);
-                    }
-                    if(user) {
+                .then(user => {
+                    if (user) {
                         req.flash('info', '此邮箱已经被注册');
                         return res.redirect("/register");
                     }
                     var newuser = new User(newuserobj);
-                    newuser.save(function(err,user) {
-                        if(err) {
-                            console.log(err);
-                        }
+                    newuser.save(user => {
                         req.session.leveluser = user.username;
                         res.redirect('/');
                     });
                 })
         });
 }
-exports.postlogin = function(req, res) {
+exports.postlogin = (req, res) => {
     const errors = validationResult(req);
-    if(!errors.isEmpty()) {
+    if (!errors.isEmpty()) {
         return res.status(422).json({
             errors: errors.array()
         });
     }
-    var email = req.body.email;
-    var md5 = crypto.createHash('md5');
-    var password = md5.update(req.body.password).digest('hex');
-    User.findOne({email:email,password:password})
-        .exec(function(err,user){
-            if(err) {
-                console.log(err);
-            }
-            if(!user) {
-                req.flash('info','对不起，邮箱或密码错误');
+    const email = req.body.email;
+    const md5 = crypto.createHash('md5');
+    const password = md5.update(req.body.password).digest('hex');
+    User.findOne({email: email, password: password})
+        .then(user => {
+            if (!user) {
+                req.flash('info', '对不起，邮箱或密码错误');
                 return res.redirect("/login");
             }
             req.session.leveluser = user.username;
@@ -1110,38 +922,32 @@ exports.postlogin = function(req, res) {
         });
 
 }
-exports.logout = function(req, res) {
+exports.logout = (req, res) => {
     req.session.leveluser = null;
     res.redirect("/");
 }
-exports.adminusers = function(req ,res) {
-    var page = req.query.page > 0 ? req.query.page : 1;
-    var perPage = 15;
+exports.adminusers = (req, res) => {
+    const page = req.query.page > 0 ? req.query.page : 1;
+    const perPage = 15;
     User.find()
         .sort("-createAt")
         .limit(perPage)
         .skip(perPage * (page - 1))
-        .exec(function(err, users) {
-            if(err) {
-                console.log(err);
-            }
-            User.find().count(function(err, count) {
-                if(err) {
-                    console.log(err);
-                }
+        .then(users => {
+            User.find().count(count => {
                 res.render("adminusers", {
                     title: '后台用户管理',
                     users: users,
                     page: page,
-                    pages: Math.ceil(count/perPage)
+                    pages: Math.ceil(count / perPage)
                 })
             })
         })
 }
-exports.gencard = function(req, res) {
-    var days = req.body.days;
-    var counts = req.body.counts;
-    var cards = [];
+exports.gencard = (req, res) => {
+    const days = req.body.days;
+    const counts = req.body.counts;
+    const cards = [];
     for (let index = 0; index < parseInt(counts); index++) {
         cards.push({
             card: randomcard(),
@@ -1150,44 +956,31 @@ exports.gencard = function(req, res) {
             createAt: Date.now()
         })
     }
-    Card.insertMany(cards, function(err) {
-        if(err) {
-            console.log(err);
-        }
-        res.redirect("/admin/users");
-    })
+    Card.insertMany(cards)
+    res.redirect("/admin/users");
 }
-exports.cards = function(req, res) {
-    var page = req.query.page > 0 ? req.query.page : 1;
-    var perPage = 15;
+exports.cards = (req, res) => {
+    const page = req.query.page > 0 ? req.query.page : 1;
+    const perPage = 15;
     Card.find()
         .sort("-createAt")
         .limit(perPage)
         .skip(perPage * (page - 1))
-        .exec(function(err, cards) {
-            if(err) {
-                console.log(err);
-            }
-            Card.find().count(function(err, count) {
-                if(err) {
-                    console.log(err);
-                }
+        .then(cards => {
+            Card.find().count(count => {
                 res.render("admincards", {
                     title: '后台用户管理',
                     cards: cards,
                     page: page,
-                    pages: Math.ceil(count/perPage)
+                    pages: Math.ceil(count / perPage)
                 })
             })
         })
 }
-exports.addcard = function(req, res) {
+exports.addcard = (req, res) => {
     Portal.find()
-        .exec(function(err, portal) {
-            if(err) {
-                console.log(err);
-            }
-            res.render(req.portal.theme+'/addcard', {
+        .then(portal => {
+            res.render(req.portal.theme + '/addcard', {
                 portal: portal[0],
                 title: '升级成会员',
                 user: req.session.leveluser,
@@ -1195,46 +988,33 @@ exports.addcard = function(req, res) {
             })
         })
 }
-exports.postcard = function(req, res) {
+exports.postcard = (req, res) => {
     const errors = validationResult(req);
-    if(!errors.isEmpty()) {
+    if (!errors.isEmpty()) {
         return res.status(422).json({
             errors: errors.array()
         });
     }
-    var card = req.body.card;
-    Card.findOne({card: card,status:'notuse'})
-        .exec(function(err, card) {
-            if(err) {
-                console.log(err);
-            }
-            if(card) {
+    const card = req.body.card;
+    Card.findOne({card: card, status: 'notuse'})
+        .then(card => {
+            if (card) {
                 User.findOne({username: req.session.leveluser})
-                    .exec(function(err, user) {
-                        if(err) {
-                            console.log(err);
-                        }
+                    .then(user => {
                         var duedate = user.duedate;
-                        if(duedate&&moment(duedate).isAfter(Date.now())) {
+                        if (duedate && moment(duedate).isAfter(Date.now())) {
                             duedate = moment(duedate).add(card.days, 'days');
                         } else {
                             duedate = moment().add(card.days, 'days');
                         }
                         user.duedate = duedate;
                         user.level = 2;
-                        user.save(function(err,newuser){
-                            if(err) {
-                                console.log(err);
-                            }
+                        user.save(newuser => {
                             card.status = 'used';
                             card.useby = newuser.username;
-                            card.save(function(err) {
-                                if(err) {
-                                    console.log(err);
-                                }
-                                req.flash('info', '开通会员成功，会员时间到' + moment(newuser.duedate).format("YYYY MM DD"));
-                                return res.redirect("/addcard");
-                            })
+                            card.save()
+                            req.flash('info', '开通会员成功，会员时间到' + moment(newuser.duedate).format("YYYY MM DD"));
+                            return res.redirect("/addcard");
                         })
                     })
             } else {
@@ -1243,159 +1023,125 @@ exports.postcard = function(req, res) {
             }
         })
 }
-exports.getcardtxt = function(req, res) {
+exports.getcardtxt = (req, res) => {
     Card.find({status: 'notuse'})
-        .exec(function(err, cards){
-            if(err) {
-                console.log(err);
-            }
+        .then(cards => {
             res.set({
-                'Content-Type': 'application/octet-stream', 
+                'Content-Type': 'application/octet-stream',
                 'Content-Disposition': 'attachment; filename=card.txt'
             });
-            var thecards = _.pluck(cards,'card');
+            var thecards = _.pluck(cards, 'card');
             res.send(thecards.join("\n"));
         })
 }
-exports.updatecategory = function(req, res) {
-    var datas = req.body.datas;
-    var datasjson = JSON.parse(datas);
+
+exports.updatecategory = (req, res) => {
+    const datas = req.body.datas;
+    const datasjson = JSON.parse(datas);
     for (let index = 0; index < datasjson.length; index++) {
         const element = datasjson[index];
-        Movie.findOne({_id:element.id})
-            .exec(function(err, movie) {
-                if(err) {
-                    console.log(err);
-                }
+        Movie.findOne({_id: element.id})
+            .then(movie => {
                 movie.category = element.category;
-                movie.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                movie.save()
             })
     }
     res.json({
         success: 1
     });
 }
-exports.editcategory = function(req, res) {
-    var id = req.params.id;
+
+exports.editcategory = (req, res) => {
+    const id = req.params.id;
     Category.findOne({_id: id})
-        .exec(function(err, category) {
-            if(err) {
-                console.log(err);
-            }
+        .then(category => {
             res.render('editcategory', {
-                title: '编辑分类'+category.title,
+                title: '编辑分类' + category.title,
                 category: category
             })
         })
 }
-exports.posteditcategory = function(req, res) {
-    var id = req.params.id;
-    var title = req.body.title;
-    var antiurl = req.body.antiurl;
-    var open = req.body.open;
+
+exports.posteditcategory = (req, res) => {
+    const id = req.params.id;
+    const title = req.body.title;
+    const antiurl = req.body.antiurl;
+    const open = req.body.open;
     console.log(open);
-    Category.findOne({_id:id})
-        .exec(function(err, category) {
-            if(err) {
-                console.log(err);
-            }
-            Movie.updateMany({category:category.title},{ $set: { category: title }},function(err) {
-                if(err) {
-                    console.log(err);
-                }
-            });
+    Category.findOne({_id: id})
+        .then(category => {
+            Movie.updateMany({category: category.title}, {$set: {category: title}});
             category.title = title;
             category.antiurl = antiurl;
             category.open = open;
-            category.save(function(err) {
-                if(err) {
-                    console.log(err);
-                }
-                res.redirect("/admin/categories");
-            })
+            category.save()
+            res.redirect("/admin/categories");
         })
 }
-exports.selectedcategory = function(req, res) {
-    var ids = [];
-    var category = req.body.category;
+exports.selectedcategory = (req, res) => {
+    let ids = [];
+    const category = req.body.category;
     ids = ids.concat(req.body.idarr);
     for (let index = 0; index < ids.length; index++) {
         const id = ids[index];
-        Movie.findOne({_id:id})
-            .exec(function(err, movie) {
-                if(err) {
-                    console.log(err);
-                }
+        Movie.findOne({_id: id})
+            .then(movie => {
                 movie.category = category;
-                movie.save(function(err) {
-                    if(err) {
-                        console.log(err);
-                    }
-                })
+                movie.save()
             })
     }
     res.json({
         success: 1
     });
 }
-exports.cuthead = function(req, res) {
-    var ids = [];
-    var duration = req.body.duration;
+exports.cuthead = async (req, res) => {
+    let ids = [];
+    const duration = req.body.duration;
     ids = ids.concat(req.body.idarr);
     for (let index = 0; index < ids.length; index++) {
         const id = ids[index];
-        Movie.findOne({_id:id})
-            .exec(function(err, movie){
-                if(err) {
-                    console.log(err);
-                }
-                if(movie.status=="waiting"){
-                    ffmpegcut.cuthead(movie,duration);
-                }
-            })
+        const movie = await Movie.findOne({_id: id})
+        if (movie.status === "waiting") {
+            ffmpegcut.cuthead(movie, duration);
+        }
     }
     res.json({
         success: 1
     });
 }
-exports.deleteselected = function(req, res) {
-    var ids = req.query.ids;
+exports.deleteselected = (req, res) => {
+    let ids = req.query.ids;
     ids = ids.split(',');
-    Movie.deleteMany({_id: {$in: ids}}, function(err) {
-        if(err) {
-            console.log(err);
-        }
-        res.json({success:1});
-    })
+    Movie.deleteMany({_id: {$in: ids}})
+    res.json({success: 1});
 }
+
 function randomcard() {
-    var data = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f","g","A","B","C","D","E","F","G"];
-    for (var j = 0; j < 500; j++) {
-        var result = "";
-        for (var i = 0; i < 20; i++) {
-            r = Math.floor(Math.random() * data.length);
+    const data = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "A", "B", "C", "D", "E", "F", "G"];
+    for (let j = 0; j < 500; j++) {
+        let result = "";
+        for (let i = 0; i < 20; i++) {
+            const r = Math.floor(Math.random() * data.length);
 
             result += data[r];
         }
         return result;
     }
 }
-function randomcolor(){
-    var r=Math.floor(Math.random()*256);
-    var g=Math.floor(Math.random()*256);
-    var b=Math.floor(Math.random()*256);
-    return "rgb("+r+','+g+','+b+")";
+
+function randomcolor() {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+    return "rgb(" + r + ',' + g + ',' + b + ")";
 }
+
 function deleteall(path) {
-    var files = [];
+    let files = [];
     if (fs.existsSync(path)) {
         files = fs.readdirSync(path);
-        files.forEach(function (file, index) {
-            var curPath = path + "/" + file;
+        files.forEach((file, index) => {
+            const curPath = path + "/" + file;
             if (fs.statSync(curPath).isDirectory()) { // recurse
                 deleteall(curPath);
             } else { // delete file
@@ -1404,27 +1150,28 @@ function deleteall(path) {
         });
         fs.rmdirSync(path);
     }
-};
-function colorRgba (str,n){
+}
+
+function colorRgba(str, n) {
     //十六进制颜色值的正则表达式
-    var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
-    var sColor = str.toLowerCase();
+    const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+    let sColor = str.toLowerCase();
     //十六进制颜色转换为RGB格式  
-    if(sColor && reg.test(sColor)){  
-        if(sColor.length === 4){
-            var sColorNew = "#";  
-            for(var i=1; i<4; i+=1){  //例如：#eee,#fff等
-                sColorNew += sColor.slice(i,i+1).concat(sColor.slice(i,i+1));     
-            }  
-            sColor = sColorNew;  
-        }  
-        //处理六位颜色值  
-        var sColorChange = [];  
-        for(var i=1; i<7; i+=2){  
-            sColorChange.push(parseInt("0x"+sColor.slice(i,i+2)));    
+    if (sColor && reg.test(sColor)) {
+        if (sColor.length === 4) {
+            let sColorNew = "#";
+            for (let i = 1; i < 4; i += 1) {  //例如：#eee,#fff等
+                sColorNew += sColor.slice(i, i + 1).concat(sColor.slice(i, i + 1));
+            }
+            sColor = sColorNew;
         }
-        return "rgba(" + sColorChange.join(",") + ","+n+")"; 
-    }else{  
-        return sColor;    
+        //处理六位颜色值  
+        const sColorChange = [];
+        for (let i = 1; i < 7; i += 2) {
+            sColorChange.push(parseInt("0x" + sColor.slice(i, i + 2)));
+        }
+        return "rgba(" + sColorChange.join(",") + "," + n + ")";
+    } else {
+        return sColor;
     }
 }

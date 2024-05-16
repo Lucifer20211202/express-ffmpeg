@@ -1,6 +1,6 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var SettingSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const SettingSchema = new Schema({
     host: String,
     hd: String,
     antiurl: [String],

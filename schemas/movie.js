@@ -1,13 +1,13 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var MovieSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const MovieSchema = new Schema({
     status: String,
     size: String,
     category: String,
     originalname: String,
     poster: String,
-    count: {type:Number, default: 0},
-    path:String,
+    count: {type: Number, default: 0},
+    path: String,
     createAt: {
         type: Date
     }

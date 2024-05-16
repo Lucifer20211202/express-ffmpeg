@@ -1,10 +1,10 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var UserSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const UserSchema = new Schema({
     username: String,
     email: String,
     password: String,
-    level: { type: Number, default: 1},
+    level: {type: Number, default: 1},
     duedate: Date,
     createAt: {
         type: Date

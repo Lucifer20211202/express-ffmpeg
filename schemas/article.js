@@ -1,6 +1,6 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var ArticleSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const ArticleSchema = new Schema({
     title: String,
     content: String,
     contentmd: String,
@@ -13,7 +13,7 @@ var ArticleSchema = new Schema({
 });
 ArticleSchema.pre('save', function (next) {
     if (!this.createAt) {
-        this.createAt = this.updateAt =  Date.now();
+        this.createAt = this.updateAt = Date.now();
     } else {
         this.updateAt = Date.now();
     }

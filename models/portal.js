@@ -1,5 +1,5 @@
-var mongoose = require('mongoose');
-var PortalSchema = require('../schemas/portal');
-var Portal = mongoose.model('Portal', PortalSchema);
+const mongoose = require('mongoose');
+const PortalSchema = require('../schemas/portal');
+const Portal = mongoose.model('Portal', PortalSchema);
 
 module.exports = Portal;

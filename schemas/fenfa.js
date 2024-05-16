@@ -1,6 +1,6 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var fenfaSchema = new Schema({
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const fenfaSchema = new Schema({
     kaiguan: String,
     domains: [String],
     createAt: {

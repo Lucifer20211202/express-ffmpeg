@@ -1,81 +1,83 @@
-var auth = require("../config/auth");
-var Admincontroller = require("../controller/admin");
-var Cmscontroller = require("../controller/cms");
-var Portal = require('../models/portal');
-var Setting = require('../models/setting');
-var User = require('../models/user');
-var multer = require('multer');
-const { body } = require('express-validator/check');
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './movies');
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname);
-  }
-});
-var upload = multer({
-  storage: storage
-});
-var imagestorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './public/images');
-  },
-  filename: function(req, file, cb) {
-    cb(null, file.originalname);
-  }
-});
-var imagesupload = multer({
-  storage: imagestorage
-});
-var articlestorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './public/uploads');
-  },
-  filename: function (req, file, cb) {
-    var fileFormat = (file.originalname).split(".");
-    cb(null, file.fieldname + '-' + Date.now() + "." + fileFormat[fileFormat.length - 1]);
-  }
-});
-var articleupload = multer({
-  storage: articlestorage,
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
-      cb(null, false);
-    } else {
-      cb(null, true);
+const auth = require("../config/auth");
+const Admincontroller = require("../controller/admin");
+const Cmscontroller = require("../controller/cms");
+const Portal = require('../models/portal');
+const Setting = require('../models/setting');
+const User = require('../models/user');
+const multer = require('multer');
+const {body} = require('express-validator/check');
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './movies');
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
     }
-  }
 });
-module.exports = function(app) {
-    app.get('/hlsserver', checkNotLogin, function(req, res, next) {
-      res.render('hlsserver', {
-        title: '云转码切片服务平台'
-      });
-    });
-    app.post("/hlsserver", checkNotLogin, function(req, res) {
-      var user = req.body.user;
-      var password = req.body.password;
-      if(user == auth.user && password == auth.password) {
-        req.session.user = user;
-        res.redirect("/admin");
-      } else {
-        res.redirect('https://baidu.com');
-      }
-    });
-    app.get("/hlslogout", checkLogin, function(req, res) {
-      req.session.user = null;
-      res.redirect("/hlsserver");
-    });
-    function posttimeout (req, res, next) {
-      req.setTimeout(10000, function() {
-        res.statusCode = 500;
-        return res.json({
-          success: 0
+const upload = multer({
+    storage: storage
+});
+const imagestorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './public/images');
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    }
+});
+const imagesupload = multer({
+    storage: imagestorage
+});
+const articlestorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './public/uploads');
+    },
+    filename: (req, file, cb) => {
+        const fileFormat = (file.originalname).split(".");
+        cb(null, file.fieldname + '-' + Date.now() + "." + fileFormat[fileFormat.length - 1]);
+    }
+});
+const articleupload = multer({
+    storage: articlestorage,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
+            cb(null, false);
+        } else {
+            cb(null, true);
+        }
+    }
+});
+module.exports = app => {
+    app.get('/hlsserver', checkNotLogin, (req, res, next) => {
+        res.render('hlsserver', {
+            title: '云转码切片服务平台'
         });
-      });
-      next();
-    };
+    });
+    app.post("/hlsserver", checkNotLogin, (req, res) => {
+        const user = req.body.user;
+        const password = req.body.password;
+        if (user === auth.user && password === auth.password) {
+            req.session.user = user;
+            res.redirect("/admin");
+        } else {
+            res.redirect('https://baidu.com');
+        }
+    });
+    app.get("/hlslogout", checkLogin, (req, res) => {
+        req.session.user = null;
+        res.redirect("/hlsserver");
+    });
+
+    function posttimeout(req, res, next) {
+        req.setTimeout(10000, () => {
+            res.statusCode = 500;
+            return res.json({
+                success: 0
+            });
+        });
+        next();
+    }
+
     app.get("/admin", checkLogin, Admincontroller.getadmin);
     app.get("/admin/upload", checkLogin, Admincontroller.getupload);
     app.get("/admin/movies", checkLogin, Admincontroller.getmovies);
@@ -85,11 +87,11 @@ module.exports = function(app) {
     app.get("/cms/articles", checkLogin, Cmscontroller.cmsarticles);
     app.get("/cms/postimages", checkLogin, Cmscontroller.postimages);
     app.post("/cms/postimages", checkLogin, Cmscontroller.dopostimages);
-    app.get("/cms/postarticles",checkLogin, Cmscontroller.postarticles);
-    app.post("/cms/postarticles",checkLogin, Cmscontroller.dopostarticles);
+    app.get("/cms/postarticles", checkLogin, Cmscontroller.postarticles);
+    app.post("/cms/postarticles", checkLogin, Cmscontroller.dopostarticles);
     app.post("/imagesupload", checkLogin, imagesupload.single('image'), Cmscontroller.imagesupload);
     app.get("/image/:id", checkopen, Cmscontroller.getimage);
-    app.get("/article/:id",checkopen, Cmscontroller.getarticle);
+    app.get("/article/:id", checkopen, Cmscontroller.getarticle);
     app.post("/upload/image", checkLogin, articleupload.single('editormd-image-file'), Cmscontroller.uploadimage);
     app.get("/imageslist", checkopen, Cmscontroller.getimages);
     app.get("/articles", checkopen, Cmscontroller.getarticles);
@@ -101,10 +103,10 @@ module.exports = function(app) {
     // api end
     app.post("/upzimu", checkLogin, upload.single('zimu'), Admincontroller.postzimu);
     app.post("/upload", checkLogin, posttimeout, upload.single('file'), Admincontroller.postupload);
-    app.post("/transcode", checkLogin, Admincontroller.transcode);
-    app.post("/listszhuanma",checkLogin, Admincontroller.listszhuanma);
+    app.post("/transcode", Admincontroller.transcode);
+    app.post("/listszhuanma", Admincontroller.listszhuanma);
     app.delete("/delete/movie", checkLogin, Admincontroller.delete);
-    app.delete("/delete/category",checkLogin, Admincontroller.delcategory);
+    app.delete("/delete/category", checkLogin, Admincontroller.delcategory);
     app.delete("/delete/user", checkLogin, Admincontroller.deluser);
     app.delete("/delete/image", checkLogin, Cmscontroller.deleteimage);
     app.delete("/delete/article", checkLogin, Cmscontroller.deletearticle);
@@ -135,176 +137,157 @@ module.exports = function(app) {
     app.post("/selectedcuthead", checkLogin, Admincontroller.cuthead);
     app.get("/login", checkUsersystemOpen, checkLevelNotLogin, Admincontroller.login);
     app.post("/login", checkUsersystemOpen, checkLevelNotLogin, [
-      body('email')
-        .isEmail()
-        .normalizeEmail(),
-      body('password')
-        .not().isEmpty()
-        .trim()
-        .escape()],
-      Admincontroller.postlogin);
+            body('email')
+                .isEmail()
+                .normalizeEmail(),
+            body('password')
+                .not().isEmpty()
+                .trim()
+                .escape()],
+        Admincontroller.postlogin);
     app.get("/logout", checkUsersystemOpen, checkLevelLogin, Admincontroller.logout);
     app.get("/register", checkUsersystemOpen, checkLevelNotLogin, Admincontroller.reg);
     app.post("/register", checkUsersystemOpen, checkLevelNotLogin, [
-      body('username')
-        .trim()
-        .isLength({min:6,max:16})
-        .escape(),
-      body('email')
-        .isEmail()
-        .normalizeEmail(),
-      body('password')
-        .trim()
-        .isLength({min:6,max:16})
-        .escape()
-    ],
-    Admincontroller.postreg);
+            body('username')
+                .trim()
+                .isLength({min: 6, max: 16})
+                .escape(),
+            body('email')
+                .isEmail()
+                .normalizeEmail(),
+            body('password')
+                .trim()
+                .isLength({min: 6, max: 16})
+                .escape()
+        ],
+        Admincontroller.postreg);
     app.get("/admin/users", checkLogin, Admincontroller.adminusers);
     app.post("/admin/gencard", checkLogin, Admincontroller.gencard);
     app.get("/admin/cards", checkLogin, Admincontroller.cards);
     app.get("/addcard", checkUsersystemOpen, checkLevelLogin, Admincontroller.addcard);
-    app.post("/addcard",checkUsersystemOpen, checkLevelLogin, [
-      body('card')
-        .trim()
-        .matches(/^[\S]{20}$/).withMessage('必须20个非空字符')
-        .escape()
-    ],
-    Admincontroller.postcard);
-    var storage1 = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, './public/mark');
-      },
-      filename: function (req, file, cb) {
-        cb(null, file.originalname);
-      }
+    app.post("/addcard", checkUsersystemOpen, checkLevelLogin, [
+            body('card')
+                .trim()
+                .matches(/^[\S]{20}$/).withMessage('必须20个非空字符')
+                .escape()
+        ],
+        Admincontroller.postcard);
+    const storage1 = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, './public/mark');
+        },
+        filename: (req, file, cb) => {
+            cb(null, file.originalname);
+        }
     });
-    var upload1 = multer({
-      storage: storage1
+    const upload1 = multer({
+        storage: storage1
     });
     app.post("/upwm", checkLogin, upload1.single('img'), Admincontroller.uploadwatermark);
-    var storage2 = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, './public/videos/');
-      },
-      filename: function (req, file, cb) {
-        cb(null, file.originalname);
-      }
+    const storage2 = multer.diskStorage({
+        "destination": (req, file, cb) => {
+            cb(null, './public/videos/');
+        },
+        "filename": (req, file, cb) => {
+            cb(null, file.originalname);
+        }
     });
-    var upload2 = multer({
-      storage: storage2
+    const upload2 = multer({
+        storage: storage2
     });
     app.post("/upvtt", checkLogin, upload2.single('vtt'), Admincontroller.uploadvtt);
     app.post("/upposter", checkLogin, upload2.single('image'), Admincontroller.uploadposter);
 
 
     function checkLogin(req, res, next) {
-      if( !req.session.user ) {
-        return res.redirect('/hlsserver');
-      }
-      next();
+        if (!req.session.user) {
+            return res.redirect('/hlsserver');
+        }
+        next();
     }
+
     app.get("/admin/card.txt", checkLogin, Admincontroller.getcardtxt);
+
     function checkNotLogin(req, res, next) {
-      if(req.session.user) {
-        return res.redirect('/admin');
-      }
-      next();
+        if (req.session.user) {
+            return res.redirect('/admin');
+        }
+        next();
     }
 
     function checkLevelLogin(req, res, next) {
-      if( !req.session.leveluser ) {
-        return res.redirect('/login');
-      }
-      next();
+        if (!req.session.leveluser) {
+            return res.redirect('/login');
+        }
+        next();
     }
 
     function checkLevelNotLogin(req, res, next) {
-      if(req.session.leveluser) {
-        return res.redirect('/');
-      }
-      next();
+        if (req.session.leveluser) {
+            return res.redirect('/');
+        }
+        next();
     }
-    function checkopen(req, res, next) {
-      Portal.find()
-          .exec(function(err, portals) {
-            if(err) {
-              console.log(err);
-            }
-            if(portals.length>0) {
-              if(portals[0].kaiguan=="on"){
-                req.portal = portals[0];
+
+    async function checkopen(req, res, next) {
+        const portals = await Portal.findOne()
+        if (portals.length > 0) {
+            if (portals.kaiguan === "on") {
+                req.portal = portals;
                 return next();
-              } else {
+            } else {
                 return res.status(404).send('对不起，cms未开启');
-              }
-            } else {
-              return res.status(404).send('对不起，cms未开启');
             }
-          })
+        } else {
+            return res.status(404).send('对不起，cms未开启');
+        }
     }
-    function checkUsersystemOpen(req, res, next) {
-      Portal.find()
-          .exec(function(err, portals) {
-            if(err) {
-              console.log(err);
-            }
-            if(portals[0].usersystem!='on'){
-              return res.status(404).send("会员系统未开启");
-            } else {
-              req.portal = portals[0];
-              next();
-            };
-          });
+
+    async function checkUsersystemOpen(req, res, next) {
+        const portals = await Portal.findOne()
+        if (portals.usersystem !== 'on') {
+            return res.status(404).send("会员系统未开启");
+        } else {
+            req.portal = portals;
+            next();
+        }
     }
-    function checkLevel(req, res, next) {
-      req.level = 2;
-      if(req.session.leveluser) {
-        User.findOne({username:req.session.leveluser})
-            .exec(function(err, user) {
-              if(err) {
-                console.log(err);
-              }
-              if(user.level == 2) {
+
+    async function checkLevel(req, res, next) {
+        req.level = 2;
+        if (req.session.leveluser) {
+            const user = await User.findOne({username: req.session.leveluser})
+            if (user.level === 2) {
                 req.level = 2;
                 next();
-              } else {
+            } else {
                 req.level = 1;
                 next();
-              }
-            })
-      } else {
-        Portal.find()
-            .exec(function(err, portals){
-              if(err) {
-                console.log(err);
-              }
-              if(portals[0].usersystem == 'on') {
+            }
+        } else {
+            const portals = await Portal.findOne()
+            if (portals.usersystem === 'on') {
                 req.level = 0;
                 next();
-              } else {
+            } else {
                 next();
-              }
-            })
-      }
+            }
+        }
     }
-    function checkApiOpen(req, res, next) {
-      Setting.find()
-          .exec(function(err, setting) {
-            if(err) {
-              console.log(err);
-            }
-            var api = setting[0].api;
-            if(api!="on"){
-              return res.status(404).send("API未开启。");
-            }
-            // var antiurlarr = setting[0].antiurl;
-            // if(antiurlarr.indexOf(req.headers.origin)!=-1){ 
-            res.header("Access-Control-Allow-Origin", '*'); 
-            res.header("Access-Control-Allow-Methods", "POST, GET"); 
-            res.header("Access-Control-Allow-Headers", "X-Requested-With"); 
-            res.header("Access-Control-Allow-Headers", "Content-Type"); 
-            // }
-            next();
-          })
+
+    async function checkApiOpen(req, res, next) {
+        const setting = await Setting.findOne()
+        const api = setting.api;
+        if (api !== "on") {
+            return res.status(404).send("API未开启。");
+        }
+        // var antiurlarr = setting.antiurl;
+        // if(antiurlarr.indexOf(req.headers.origin)!=-1){
+        res.header("Access-Control-Allow-Origin", '*');
+        res.header("Access-Control-Allow-Methods", "POST, GET");
+        res.header("Access-Control-Allow-Headers", "X-Requested-With");
+        res.header("Access-Control-Allow-Headers", "Content-Type");
+        // }
+        next();
     }
 };
