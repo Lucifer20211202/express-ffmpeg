@@ -127,7 +127,6 @@ module.exports = app => {
     app.post("/category/:id/edit", checkLogin, Admincontroller.posteditcategory);
     app.get("/admin/player", checkLogin, Admincontroller.player);
     app.post("/admin/player", checkLogin, Admincontroller.postplayer);
-    app.get("/admin/tongji", checkLogin, Admincontroller.tongji);
     app.post("/selectedcategory", checkLogin, Admincontroller.selectedcategory);
     app.post("/selectedcuthead", checkLogin, Admincontroller.cuthead);
     app.post("/upwm", checkLogin, upload1.single('img'), Admincontroller.uploadwatermark);

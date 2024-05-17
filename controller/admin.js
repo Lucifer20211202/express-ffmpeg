@@ -1,14 +1,12 @@
 const Movie = require('../models/movie');
 const Setting = require("../models/setting");
-const Fenfa = require("../models/fenfa");
+const Distribute = require("../models/distribute");
 const FFmpeghelper = require('../helper/ffmpeg');
 const ListsFFmpegHelper = require("../helper/listsffmpeg");
 const ffmpegcut = require('../helper/ffmpegcut');
 const Category = require("../models/category");
 const Player = require("../models/player");
 const fs = require('fs');
-const _ = require('underscore');
-const moment = require('moment');
 const redis = require('ioredis');
 redis.createClient(process.env.REDIS_CONNECTION_STRING);
 const cache = require('../helper/rediscache');
@@ -45,8 +43,8 @@ exports.postupload = (req, res) => {
     if (body.dzchunkindex * 1 + 1 === body.dztotalchunkcount * 1) {
         const files = fs.readdirSync(tmppath);
         for (let i = 0; i < files.length; i++) {
-            fs.appendFileSync(file.path + "", fs.readFileSync(tmppath + "/" + filename + i));
-            fs.unlinkSync(tmppath + "/" + filename + i);
+            fs.appendFileSync(`${file.path}`, fs.readFileSync(`${tmppath}/${filename}${i}`));
+            fs.unlinkSync(`${tmppath}/${filename}${i}`);
         }
         fs.rmdirSync(tmppath);
         const movieObj = {
@@ -137,7 +135,7 @@ exports.apim3u8 = async (req, res) => {
         const data = fs.readFileSync(path);
         const datastring = data.toString('utf-8');
         const m3u8arr = datastring.split("index");
-        const m3u8strings = m3u8arr.join(setting.host + "/videos/" + id + "/index");
+        const m3u8strings = m3u8arr.join(`${setting.host}/videos/${id}/index`);
         res.header('Content-Type', 'application/octet-stream');
         res.header('Content-Disposition', 'attachment; filename=index.m3u8');
         return res.status(200).send(m3u8strings);
@@ -269,9 +267,9 @@ exports.setting = async (req, res) => {
             screenshots: 0
         }
     }
-    const fenfa = await Fenfa.findOne()
+    const fenfa = await Distribute.findOne()
     let newfenfa;
-    if (fenfa.length > 0) {
+    if (fenfa) {
         newfenfa = fenfa
     } else {
         newfenfa = {
@@ -293,7 +291,7 @@ exports.postfenfa = async (req, res) => {
     if (!kaiguan) {
         kaiguan = "";
     }
-    const fenfa = await Fenfa.findOne()
+    const fenfa = await Distribute.findOne()
     if (fenfa) {
         fenfa.kaiguan = kaiguan;
         fenfa.domains = domains;
@@ -303,7 +301,7 @@ exports.postfenfa = async (req, res) => {
             kaiguan: kaiguan,
             domains: domains
         };
-        const newfenfa = new Fenfa(fenfaobj);
+        const newfenfa = new Distribute(fenfaobj);
         newfenfa.save()
     }
     res.redirect("/admin/setting");
@@ -618,48 +616,6 @@ exports.postplayer = async (req, res) => {
     res.redirect("/admin/bofangqi");
 }
 
-exports.tongji = async (req, res) => {
-    const page = req.query.page > 0 ? req.query.page : 1;
-    let perPage = req.query.counts ? req.query.counts : 10;
-    const sort = req.query.sort ? req.query.sort : "newtime";
-    perPage = parseInt(perPage);
-    let sortquery = '';
-    if (sort === "hot") {
-        sortquery = '-count';
-    } else if (sort === 'nothot') {
-        sortquery = 'count';
-    } else if (sort === 'newtime') {
-        sortquery = '-createAt';
-    } else if (sort === 'oldtime') {
-        sortquery = 'createAt';
-    }
-    const movies = await Movie.find()
-        .sort(sortquery)
-        .limit(perPage)
-        .skip(perPage * (page - 1))
-
-    const backgroundColor = [];
-    for (let index = 0; index < movies.length; index++) {
-        backgroundColor.push(randomcolor());
-        movies[index].formatdate = moment(movies[index].createAt).format('YYYY年MM月DD日, HH:mm:ss');
-    }
-    const data = {};
-    const dataarr = _.pluck(movies, 'count');
-    data.datasets = [{
-        data: dataarr,
-        backgroundColor: backgroundColor
-    }];
-    data.labels = _.pluck(movies, 'originalname');
-    const count = await Movie.countDocuments();
-    res.render('tongji', {
-        title: "播放统计",
-        movies: movies,
-        data: JSON.stringify(data),
-        page: page,
-        pages: Math.ceil(count / perPage)
-    })
-}
-
 exports.updatecategory = async (req, res) => {
     const datas = req.body.datas;
     const datasjson = JSON.parse(datas);
@@ -678,7 +634,7 @@ exports.editcategory = async (req, res) => {
     const id = req.params.id;
     const category = await Category.findOne({_id: id})
     res.render('editcategory', {
-        title: '编辑分类' + category.title,
+        title: `编辑分类${category.title}`,
         category: category
     })
 }
@@ -735,13 +691,6 @@ exports.deleteselected = (req, res) => {
     res.json({success: 1});
 }
 
-function randomcolor() {
-    const r = Math.floor(Math.random() * 256);
-    const g = Math.floor(Math.random() * 256);
-    const b = Math.floor(Math.random() * 256);
-    return "rgb(" + r + ',' + g + ',' + b + ")";
-}
-
 function deleteall(path) {
     let files = [];
     if (fs.existsSync(path)) {
@@ -776,7 +725,7 @@ function colorRgba(str, n) {
         for (let i = 1; i < 7; i += 2) {
             sColorChange.push(parseInt("0x" + sColor.slice(i, i + 2)));
         }
-        return "rgba(" + sColorChange.join(",") + "," + n + ")";
+        return `rgba(${sColorChange.join(",")},${n})`;
     } else {
         return sColor;
     }

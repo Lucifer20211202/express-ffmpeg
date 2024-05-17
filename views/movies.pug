@@ -3,7 +3,7 @@ block content
   include navbar
   .layui-container.main
     .layui-row
-      .layui-col-md8.layui-col-md-offset2
+      .layui-col-md12
         h1.title 全部电影库
         .flex
           .layui-btn-group#actions
@@ -11,7 +11,7 @@ block content
             button.layui-btn.listszhuanma 队列转码
             button.layui-btn.ruku 扫描入库
             button.layui-btn.zimu 上传字幕
-          form.layui-form(action="").float-right
+          form.layui-form(action="")
             .layui-form-item
               label.layui-form-label 搜索
               .layui-input-inline
@@ -31,8 +31,9 @@ block content
         table.layui-table
           thead
             tr
-              th(width="100px") 分类
+              th(width="200px") 分类
               th 电影名
+              th 播放次数
               th 大小
               th 状态
               th(width="250px") 操作
@@ -46,6 +47,7 @@ block content
                     each category in categories
                       option(value=category.title selected=category.title === movie.category) #{category.title}
                 td #{movie.originalname}
+                td #{movie.count}
                 td #{parseInt(movie.size/1000000)}MB
                 td #{movie.status}
                 td
@@ -83,5 +85,5 @@ block content
           .layui-form-item
             label.layui-form-label 剪切时长
             .layui-input-block
-              input.layui-input.duration(type="text",name="duration",placeholder="输入时间轴，格式00:00:10")
+              input.layui-input.duration(type="text", name="duration", placeholder="输入时间轴，格式00:00:10")
           button.layui-btn.layui-btn-sm.docuthead 确定

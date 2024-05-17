@@ -14,7 +14,7 @@ const routes = require('./routes/index');
 const app = express();
 mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
 const Setting = require('./models/setting');
-const Fenfa = require("./models/fenfa");
+const Distribute = require("./models/distribute");
 // view engine setup
 
 app.set('views', path.join(__dirname, 'views'));
@@ -73,7 +73,7 @@ app.use("/videos/:id/index.m3u8", async (req, res, next) => {
                 res.statusCode = 404;
                 return res.send("对不起，您没有权限");
             }
-            const fenfa = await Fenfa.findOne()
+            const fenfa = await Distribute.findOne()
             if (fenfa.kaiguan === "on") {
                 path = `./public/videos/${id}/index.m3u8`;
                 m3u8exists = fs.existsSync(path);
