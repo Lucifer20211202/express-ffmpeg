@@ -613,7 +613,7 @@ exports.postplayer = async (req, res) => {
         const newplayer = new Player(playerobj);
         newplayer.save()
     }
-    res.redirect("/admin/bofangqi");
+    res.redirect("/admin/player");
 }
 
 exports.updatecategory = async (req, res) => {

@@ -5,7 +5,6 @@
  */
 require("../env")
 const app = require('../app');
-const debug = require('debug')('hls:server');
 const http = require('http');
 
 /**
@@ -22,27 +21,28 @@ const server = http.createServer(app);
 /**
  * Listen on provided port, on all network interfaces.
  */
-server.listen(port);
+server.listen(port, '127.0.0.1');
 server.on('error', onError);
 server.on('listening', onListening);
+
 /**
  * Normalize a port into a number, string, or false.
  */
 
 function normalizePort(val) {
-  const port = parseInt(val, 10);
+    const port = parseInt(val, 10);
 
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
 
-  if (port >= 0) {
-    // port number
-    return port;
-  }
+    if (port >= 0) {
+        // port number
+        return port;
+    }
 
-  return false;
+    return false;
 }
 
 /**
@@ -50,27 +50,27 @@ function normalizePort(val) {
  */
 
 function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
 
-  const bind = typeof port === 'string'
-      ? 'Pipe ' + port
-      : 'Port ' + port;
+    const bind = typeof port === 'string'
+        ? `Pipe ${port}`
+        : `Port ${port}`;
 
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(`${bind} requires elevated privileges`);
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(`${bind} is already in use`);
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
 }
 
 /**
@@ -78,17 +78,15 @@ function onError(error) {
  */
 
 function onListening() {
-  const addr = server.address();
-  const bind = typeof addr === 'string'
-      ? `pipe ${addr}`
-      : `port ${addr.port}`;
-  debug(`Listening on ${bind}`);
+    const host = server.address().address;
+    const port = server.address().port;
+    console.log(`Server listening at http://${host}:${port}`);
 }
 
 process.on('uncaughtException', exception => {
-  console.log('exception', exception.stack)
+    console.log('exception', exception.stack)
 })
 
 process.on('unhandledRejection', (reason, p) => {
-  console.log('未处理的 rejection：', p, '原因：', reason)
+    console.log('未处理的 rejection：', p, '原因：', reason)
 })

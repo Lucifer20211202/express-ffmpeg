@@ -9,7 +9,7 @@ const flash = require('connect-flash');
 const jwt = require('jsonwebtoken');
 const fs = require("fs");
 const mongoose = require("mongoose");
-const MongoStore = require('connect-mongo')(session);
+const MongoStore = require('connect-mongo');
 const routes = require('./routes/index');
 const app = express();
 mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
@@ -31,9 +31,7 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 30
     }, //30day
-    store: new MongoStore({
-        url: process.env.MONGODB_CONNECTION_STRING
-    })
+    store: MongoStore.create({mongoUrl: process.env.MONGODB_CONNECTION_STRING})
 }));
 
 app.use("/videos/*/ts.key", async (req, res, next) => {
