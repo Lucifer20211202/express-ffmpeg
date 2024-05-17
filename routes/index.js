@@ -125,8 +125,8 @@ module.exports = app => {
     app.get("/admin/categories", checkLogin, Admincontroller.getCategories);
     app.get("/category/:id/edit", checkLogin, Admincontroller.editcategory);
     app.post("/category/:id/edit", checkLogin, Admincontroller.posteditcategory);
-    app.get("/admin/bofangqi", checkLogin, Admincontroller.bofangqi);
-    app.post("/admin/bofangqi", checkLogin, Admincontroller.postbofangqi);
+    app.get("/admin/player", checkLogin, Admincontroller.player);
+    app.post("/admin/player", checkLogin, Admincontroller.postplayer);
     app.get("/admin/tongji", checkLogin, Admincontroller.tongji);
     app.post("/selectedcategory", checkLogin, Admincontroller.selectedcategory);
     app.post("/selectedcuthead", checkLogin, Admincontroller.cuthead);

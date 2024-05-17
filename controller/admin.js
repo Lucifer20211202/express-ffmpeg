@@ -494,7 +494,7 @@ exports.getCategories = async (req, res) => {
     })
 }
 
-exports.bofangqi = async (req, res) => {
+exports.player = async (req, res) => {
     let player;
     const players = await Player.findOne()
     if (players) {
@@ -533,7 +533,7 @@ exports.bofangqi = async (req, res) => {
     })
 }
 
-exports.postbofangqi = async (req, res) => {
+exports.postplayer = async (req, res) => {
     const kaiguan = req.body.kaiguan;
     const position = req.body.position;
     const mark = req.body.watermark;
