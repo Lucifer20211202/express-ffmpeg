@@ -141,7 +141,7 @@ function ffmpegtransandchunk(des, path, config, vf, id) {
             movie.save()
         })
         .on('error', async (err, stdout, stderr) => {
-            console.log('Cannot process video: ' + path + err.message);
+            console.log(`Cannot process video: ${path}${err.message}`);
             const movie = await Movie.findOne({_id: id})
             movie.status = "error & failed";
             movie.save()
@@ -159,6 +159,10 @@ function ffmpegtransandchunk(des, path, config, vf, id) {
 
 async function screenshots(path, des) {
     const setting = await Setting.findOne()
+    const count = setting.screenshots ?? 0
+    if (count <= 0) {
+        return
+    }
     ffmpeg(path)
         .screenshots({
             count: setting.screenshots,
@@ -180,10 +184,11 @@ function chunk(path, des, id, config, vf, tsjiami) {
         '-hls_list_size 0'
     ];
     if (tsjiami === 'on') {
-        chunkconfig.push('-hls_key_info_file ' + des + '/key.info');
+        chunkconfig.push(`-hls_key_info_file ${des}/key.info`);
     }
     ffmpeg(path)
-        .addOptions(chunkconfig).output(des + "/index.m3u8")
+        .addOptions(chunkconfig)
+        .output(des + "/index.m3u8")
         .on('end', async () => {
             await screenshots(path, des);
             const movie = await Movie.findOne({_id: id})

@@ -20,13 +20,11 @@ exports.getTokenByRedis = cb => {
     })
 }
 
-function getMoviesFromJwt(cb) {
-    Setting.find()
-        .then(setting => {
-            const token = jwt.sign({access: "view"}, setting[0].antikey, {expiresIn: '100s'});
-            client.setex('token', 99, token);
-            cb(null, token);
-        })
+async function getMoviesFromJwt(cb) {
+    const setting = await Setting.findOne()
+    const token = jwt.sign({access: "view"}, setting.antikey, {expiresIn: '100s'});
+    client.setex('token', 99, token);
+    cb(null, token);
 }
 
 function getTokenFromRedis(cb) {

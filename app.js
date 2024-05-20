@@ -9,7 +9,13 @@ const flash = require('connect-flash');
 const jwt = require('jsonwebtoken');
 const fs = require("fs");
 const mongoose = require("mongoose");
-const MongoStore = require('connect-mongo');
+const RedisStore = require("connect-redis").default
+const redis = require('ioredis');
+const redisClient = redis.createClient(process.env.REDIS_CONNECTION_STRING);
+let redisStore = new RedisStore({
+    client: redisClient,
+    prefix: "ffmpeg:",
+})
 const routes = require('./routes/index');
 const app = express();
 mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
@@ -31,7 +37,7 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 30
     }, //30day
-    store: MongoStore.create({mongoUrl: process.env.MONGODB_CONNECTION_STRING})
+    store: redisStore
 }));
 
 app.use("/videos/*/ts.key", async (req, res, next) => {
@@ -144,6 +150,7 @@ app.use(function (req, res, next) {
             total_list = list_len * 2 + 1,
             j = 1,
             pageNo = parseInt(page);
+        console.log(`createPagination`,params)
         if (pageNo >= total_list) {
             j = pageNo - list_len;
             total_list = pageNo + list_len;

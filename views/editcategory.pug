@@ -11,10 +11,6 @@ block content
             .layui-input-block
               input.layui-input(type="text",value=category.title,name="title",placeholder="输入分类名")
           .layui-form-item
-            label.layui-form-label 分类防盗链
-            .layui-input-block
-              input.layui-input(type="text",value=category.antiurl?category.antiurl:"",name="antiurl",placeholder="配置分类的引用防盗链，链接之间用|分开")
-          .layui-form-item
             label.layui-form-label 开放浏览
             .layui-input-block
               input(type="checkbox",name="open",lay-skin="switch",lay-text="开启|关闭",checked=category.open?(category.open === "on"):false)

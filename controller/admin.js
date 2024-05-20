@@ -5,7 +5,6 @@ const FFmpeghelper = require('../helper/ffmpeg');
 const ListsFFmpegHelper = require("../helper/listsffmpeg");
 const ffmpegcut = require('../helper/ffmpegcut');
 const Category = require("../models/category");
-const Player = require("../models/player");
 const fs = require('fs');
 const redis = require('ioredis');
 redis.createClient(process.env.REDIS_CONNECTION_STRING);
@@ -39,7 +38,7 @@ exports.postupload = (req, res) => {
         fs.mkdirSync(tmppath);
     }
     const newfilename = filename + body.dzchunkindex;
-    fs.renameSync(file.path, tmppath + "/" + newfilename);
+    fs.renameSync(file.path, `${tmppath}/${newfilename}`);
     if (body.dzchunkindex * 1 + 1 === body.dztotalchunkcount * 1) {
         const files = fs.readdirSync(tmppath);
         for (let i = 0; i < files.length; i++) {
@@ -161,6 +160,7 @@ exports.listszhuanma = async (req, res) => {
         success: 1
     })
 }
+
 exports.delete = async (req, res) => {
     const id = req.query.id;
     const movie = await Movie.findOne({_id: id})
@@ -185,29 +185,11 @@ exports.getmovie = async (req, res) => {
     const agent = req.headers["user-agent"].toLowerCase();
     const movie = await Movie.findOneAndUpdate({_id: id}, {$inc: {count: 1}})
     const setting = await Setting.findOne()
-    const player = await Player.findOne()
     const phoneviewer = agent.match(/(iphone|ipod|ipad|android)/);
     if (!movie) {
         res.statusCode = 404;
         return res.send("对不起，此页面不存在");
     }
-    let waplock = true;
-    if (player?.waplock === 'on') {
-        const browser = agent.match(/mqqbrowser/);
-        if (phoneviewer) {
-            if (browser) {
-                waplock = false;
-            }
-        }
-    }
-    const category = await Category.findOne({title: movie.category})
-    let categoryanti = "";
-    let open = "";
-    if (category) {
-        categoryanti = category.antiurl ? category.antiurl : "";
-        open = category.open ? category.open : "";
-    }
-    const rgba = colorRgba(player.wenzibackground, player.wenzibackgroundopacity);
     if (setting?.antikey !== "") {
         cache.getTokenByRedis((err, token) => {
             if (err) {
@@ -221,12 +203,7 @@ exports.getmovie = async (req, res) => {
                 poster: movie.poster,
                 phoneviewer: phoneviewer,
                 antiredirect: setting.antiredirect,
-                waplock: waplock,
-                player: player,
-                rgba: rgba,
                 antiurl: setting.antiurl,
-                categoryanti: categoryanti,
-                open: open
             })
         })
     } else {
@@ -238,12 +215,7 @@ exports.getmovie = async (req, res) => {
             poster: movie.poster,
             phoneviewer: phoneviewer,
             antiredirect: setting.antiredirect,
-            waplock: waplock,
-            player: player,
-            rgba: rgba,
             antiurl: setting.antiurl,
-            categoryanti: categoryanti,
-            open: open
         })
     }
 }
@@ -492,130 +464,6 @@ exports.getCategories = async (req, res) => {
     })
 }
 
-exports.player = async (req, res) => {
-    let player;
-    const players = await Player.findOne()
-    if (players) {
-        player = players;
-    } else {
-        player = {
-            kaiguan: '',
-            mark: '/mark/mark.png',
-            position: 'lefttop',
-            markx: 20,
-            marky: 20,
-            p2p: 'on',
-            waplock: 'on',
-            locktip: '<p style="color:#fff;">请使用qq浏览器观看</p>',
-            font: 'Microsoft Yahei',
-            fontsize: 14,
-            opacity: 0.8,
-            bold: 'on',
-            color: '#701919',
-            text: '云转码',
-            wenzikaiguan: 'on',
-            italic: 'on',
-            underline: 'on',
-            link: 'http://ffmpeg.moejj.com',
-            wenziposition: 'lefttop',
-            wenzibackground: '#fff',
-            wenzibackgroundopacity: 0.5,
-            tongji: '',
-            wenzix: 20,
-            wenziy: 20
-        }
-    }
-    res.render('adminplayer', {
-        title: '播放器设置',
-        player: player
-    })
-}
-
-exports.postplayer = async (req, res) => {
-    const kaiguan = req.body.kaiguan;
-    const position = req.body.position;
-    const mark = req.body.watermark;
-    const markx = req.body.markx;
-    const marky = req.body.marky;
-    const p2p = req.body.p2p;
-    const wenzikaiguan = req.body.wenzikaiguan;
-    const font = req.body.font;
-    const fontsize = req.body.fontsize;
-    const opacity = req.body.opacity;
-    const link = req.body.link;
-    const wenziposition = req.body.wenziposition;
-    const wenzibackground = req.body.wenzibackground;
-    const wenzibackgroundopacity = req.body.wenzibackgroundopacity;
-    const wenzix = req.body.wenzix;
-    const wenziy = req.body.wenziy;
-    const color = req.body.color;
-    const bold = req.body.bold;
-    const text = req.body.text;
-    const italic = req.body.italic;
-    const underline = req.body.underline;
-    const waplock = req.body.waplock;
-    const locktip = req.body.locktip;
-    const tongji = req.body.tongji;
-    const players = await Player.findOne()
-    if (players) {
-        players.kaiguan = kaiguan;
-        players.mark = mark;
-        players.position = position;
-        players.markx = markx;
-        players.marky = marky;
-        players.p2p = p2p;
-        players.waplock = waplock;
-        players.locktip = locktip;
-        players.wenzikaiguan = wenzikaiguan;
-        players.font = font;
-        players.fontsize = fontsize;
-        players.opacity = opacity;
-        players.link = link;
-        players.wenziposition = wenziposition;
-        players.wenzibackground = wenzibackground;
-        players.wenzibackgroundopacity = wenzibackgroundopacity;
-        players.wenzix = wenzix;
-        players.wenziy = wenziy;
-        players.color = color;
-        players.bold = bold;
-        players.text = text;
-        players.italic = italic;
-        players.underline = underline;
-        players.tongji = tongji;
-        players.save()
-    } else {
-        const playerobj = {
-            kaiguan: kaiguan,
-            mark: mark,
-            position: position,
-            markx: markx,
-            marky: marky,
-            p2p: p2p,
-            waplock: waplock,
-            locktip: locktip,
-            text: text,
-            wenzikaiguan: wenzikaiguan,
-            font: font,
-            fontsize: fontsize,
-            opacity: opacity,
-            bold: bold,
-            color: color,
-            underline: underline,
-            italic: italic,
-            link: link,
-            wenziposition: wenziposition,
-            wenzibackground: wenzibackground,
-            wenzibackgroundopacity: wenzibackgroundopacity,
-            wenzix: wenzix,
-            wenziy: wenziy,
-            tongji: tongji
-        };
-        const newplayer = new Player(playerobj);
-        newplayer.save()
-    }
-    res.redirect("/admin/player");
-}
-
 exports.updatecategory = async (req, res) => {
     const datas = req.body.datas;
     const datasjson = JSON.parse(datas);
@@ -642,12 +490,10 @@ exports.editcategory = async (req, res) => {
 exports.posteditcategory = async (req, res) => {
     const id = req.params.id;
     const title = req.body.title;
-    const antiurl = req.body.antiurl;
     const open = req.body.open;
     const category = await Category.findOne({_id: id})
     Movie.updateMany({category: category.title}, {$set: {category: title}});
     category.title = title;
-    category.antiurl = antiurl;
     category.open = open;
     category.save()
     res.redirect("/admin/categories");
